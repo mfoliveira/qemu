@@ -1722,6 +1722,23 @@ static target_ulong h_get_cpu_characteristics(PowerPCCPU *cpu,
     return H_SUCCESS;
 }
 
+static target_ulong h_vasi_state(PowerPCCPU *cpu,
+                                 sPAPRMachineState *spapr,
+                                 target_ulong opcode,
+                                 target_ulong *args)
+{
+	args[0] = H_VASI_SUSPENDING;
+	return H_SUCCESS;
+}
+
+static target_ulong h_join(PowerPCCPU *cpu,
+                           sPAPRMachineState *spapr,
+                           target_ulong opcode,
+                           target_ulong *args)
+{
+	return H_CONTINUE;
+}
+
 static spapr_hcall_fn papr_hypercall_table[(MAX_HCALL_OPCODE / 4) + 1];
 static spapr_hcall_fn kvmppc_hypercall_table[KVMPPC_HCALL_MAX - KVMPPC_HCALL_BASE + 1];
 
@@ -1823,6 +1840,14 @@ static void hypercall_register_types(void)
 
     /* ibm,client-architecture-support support */
     spapr_register_hypercall(KVMPPC_H_CAS, h_client_architecture_support);
+
+    /* hcall-vasi-state */
+    spapr_register_hypercall(H_VASI_STATE,
+                             h_vasi_state);
+
+    /* hcall-join */
+    spapr_register_hypercall(H_JOIN,
+                             h_join);
 }
 
 type_init(hypercall_register_types)
