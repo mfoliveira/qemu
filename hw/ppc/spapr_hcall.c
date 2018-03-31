@@ -14,6 +14,7 @@
 #include "kvm_ppc.h"
 #include "hw/ppc/spapr_ovec.h"
 #include "mmu-book3s-v3.h"
+#include "qemu/cutils.h"
 
 struct SPRSyncState {
     int spr;
@@ -1676,6 +1677,11 @@ static target_ulong h_get_cpu_characteristics(PowerPCCPU *cpu,
     uint8_t safe_bounds_check = spapr_get_cap(spapr, SPAPR_CAP_SBBC);
     uint8_t safe_indirect_branch = spapr_get_cap(spapr, SPAPR_CAP_IBS);
 
+#ifdef DEBUG_H_GET_CPU_CHARACTERISTICS
+    static bool first_call = true;
+    const char *env_var;
+#endif
+
     switch (safe_cache) {
     case SPAPR_CAP_WORKAROUND:
         characteristics |= H_CPU_CHAR_L1D_FLUSH_ORI30;
@@ -1715,6 +1721,22 @@ static target_ulong h_get_cpu_characteristics(PowerPCCPU *cpu,
         assert(safe_indirect_branch == SPAPR_CAP_BROKEN);
         break;
     }
+
+#ifdef DEBUG_H_GET_CPU_CHARACTERISTICS
+    /*
+     * Override characteristics and/or behaviour with environment
+     * variables, possibly using different value(s) on first call.
+     */
+    if ((first_call && (env_var = getenv("H_CPU_CHARS_1"))) ||
+                       (env_var = getenv("H_CPU_CHARS")))
+        qemu_strtou64(env_var, NULL, 16, &characteristics);
+
+    if ((first_call && (env_var = getenv("H_CPU_BEHAV_1"))) ||
+                       (env_var = getenv("H_CPU_BEHAV")))
+        qemu_strtou64(env_var, NULL, 16, &behaviour);
+
+    first_call = false;
+#endif
 
     args[0] = characteristics;
     args[1] = behaviour;
